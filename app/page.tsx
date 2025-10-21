@@ -1,6 +1,6 @@
 "use client"
 
-import type React from "react"
+import * as React from "react"
 
 import { useState, useEffect, useRef, type FormEvent } from "react"
 import { motion, useScroll, useTransform, useSpring, AnimatePresence } from "framer-motion"
@@ -29,12 +29,13 @@ import {
   Github,
   Linkedin,
   Twitter,
+  Facebook,
+  Instagram,
   ExternalLink,
   Clock,
 
   Settings,
   FileText,
-  Download,
   ArrowLeft,
   Monitor,
   Smartphone,
@@ -165,6 +166,20 @@ export default function AdvancedTechWebsite() {
     message: "",
   })
   const [formErrors, setFormErrors] = useState<Partial<ContactFormData>>({})
+  const [expandedSections, setExpandedSections] = useState<{ [key: string]: boolean }>({
+    services: false,
+    company: false,
+  })
+  const [showAllTechnologies, setShowAllTechnologies] = useState(false)
+  const [activePolicy, setActivePolicy] = useState<string | null>(null)
+  const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false)
+  const [feedbackData, setFeedbackData] = useState({
+    name: "",
+    email: "",
+    rating: 0,
+    feedback: "",
+  })
+  const [feedbackErrors, setFeedbackErrors] = useState<Record<string, string>>({})
 
   // Refs for sections
   const sectionRefs = {
@@ -177,18 +192,39 @@ export default function AdvancedTechWebsite() {
     contact: useRef<HTMLElement>(null),
   }
 
+  // Horizontal scroller refs
+  const servicesScrollRef = useRef<HTMLDivElement | null>(null)
+  const portfolioScrollRef = useRef<HTMLDivElement | null>(null)
+  const testimonialsScrollRef = useRef<HTMLDivElement | null>(null)
+  const teamScrollRef = useRef<HTMLDivElement | null>(null)
+
+  const scrollHorizontally = (ref: React.RefObject<HTMLDivElement | null>, direction: "left" | "right") => {
+    const node = ref.current
+    if (!node) return
+    const amount = node.clientWidth * 0.8
+    node.scrollBy({ left: direction === "left" ? -amount : amount, behavior: "smooth" })
+  }
+
   const { toast } = useToast()
 
-  // Scroll animations
-  const { scrollYProgress } = useScroll()
-  const y = useTransform(scrollYProgress, [0, 1], ["0%", "100%"])
-  const opacity = useTransform(scrollYProgress, [0, 0.3], [1, 0])
-  const scale = useTransform(scrollYProgress, [0, 0.5], [1, 0.8])
-  const rotate = useTransform(scrollYProgress, [0, 1], [0, 360])
+  // Toggle expanded sections
+  const toggleSection = (section: string) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }))
+  }
 
-  const springConfig = { stiffness: 100, damping: 30, restDelta: 0.001 }
-  const x = useSpring(0, springConfig)
-  const ySpring = useSpring(0, springConfig)
+  // Policy modal functions
+  const openPolicy = (policy: string) => {
+    setActivePolicy(policy)
+  }
+
+  const closePolicy = () => {
+    setActivePolicy(null)
+  }
+
+  // Scroll animations removed
 
   // Service details data
   const serviceDetails: Record<string, ServiceDetail> = {
@@ -635,7 +671,7 @@ export default function AdvancedTechWebsite() {
     "Created digital content strategies that boosted brand visibility",
     "Executed successful paid ad campaigns across social platforms"
   ],
-  social: { linkedin: "#", behance: "#", instagram: "#" }
+  social: { linkedin: "#", github: "#", twitter: "#" }
 },
 
 "Ganna Mohy": {
@@ -875,17 +911,10 @@ export default function AdvancedTechWebsite() {
 
   // Insight details
   
-  // Handle mouse movement for cursor effect
+  // Handle page load
   useEffect(() => {
     setIsLoaded(true)
-    const handleMouseMove = (e: MouseEvent) => {
-      setMousePosition({ x: e.clientX, y: e.clientY })
-      x.set(e.clientX)
-      ySpring.set(e.clientY)
-    }
-    window.addEventListener("mousemove", handleMouseMove)
-    return () => window.removeEventListener("mousemove", handleMouseMove)
-  }, [x, ySpring])
+  }, [])
 
   // Handle scroll to detect active section
   useEffect(() => {
@@ -910,6 +939,24 @@ export default function AdvancedTechWebsite() {
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
 
+  // Handle keyboard events for modals
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        if (isFeedbackModalOpen) {
+          closeFeedbackModal()
+        } else if (activeModal) {
+          closeModal()
+        } else if (activePolicy) {
+          closePolicy()
+        }
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [isFeedbackModalOpen, activeModal, activePolicy])
+
   // Smooth scroll to section
   const scrollToSection = (sectionId: string) => {
     const section = sectionRefs[sectionId as keyof typeof sectionRefs]?.current
@@ -933,6 +980,19 @@ export default function AdvancedTechWebsite() {
   const closeModal = () => {
     setActiveModal(null)
     setModalData(null)
+    document.body.style.overflow = "unset"
+  }
+
+  // Handle feedback modal
+  const openFeedbackModal = () => {
+    setIsFeedbackModalOpen(true)
+    document.body.style.overflow = "hidden"
+  }
+
+  const closeFeedbackModal = () => {
+    setIsFeedbackModalOpen(false)
+    setFeedbackData({ name: "", email: "", rating: 0, feedback: "" })
+    setFeedbackErrors({})
     document.body.style.overflow = "unset"
   }
 
@@ -982,7 +1042,7 @@ export default function AdvancedTechWebsite() {
     setIsSubmitting(true)
 
     try {
-      // Send email to hebahesham102@gmail.com
+      // Send email to info@starsolution.ai
       const response = await fetch("/api/contact", {
         method: "POST",
         headers: {
@@ -990,7 +1050,7 @@ export default function AdvancedTechWebsite() {
         },
         body: JSON.stringify({
           ...formData,
-          to: "hebahesham102@gmail.com",
+          to: "info@starsolution.ai",
         }),
       })
 
@@ -1023,6 +1083,63 @@ export default function AdvancedTechWebsite() {
     }
   }
 
+  // Handle feedback form submission
+  const handleFeedbackSubmit = async (e: FormEvent) => {
+    e.preventDefault()
+
+    // Validate feedback form
+    const errors: Record<string, string> = {}
+    if (!feedbackData.name.trim()) errors.name = "Name is required"
+    if (!feedbackData.email.trim()) errors.email = "Email is required"
+    if (!feedbackData.email.includes("@")) errors.email = "Please enter a valid email"
+    if (feedbackData.rating === 0) errors.rating = "Please select a rating"
+    if (!feedbackData.feedback.trim()) errors.feedback = "Feedback is required"
+
+    setFeedbackErrors(errors)
+    if (Object.keys(errors).length > 0) return
+
+    setIsSubmitting(true)
+
+    try {
+      // Send feedback email to info@starsolution.ai
+      const response = await fetch("/api/contact", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: feedbackData.name,
+          email: feedbackData.email,
+          message: `Feedback Rating: ${feedbackData.rating}/5 stars\n\nFeedback:\n${feedbackData.feedback}`,
+          to: "info@starsolution.ai",
+        }),
+      })
+
+      if (response.ok) {
+        toast({
+          title: "Feedback sent successfully!",
+          description: "Thank you for your valuable feedback. We appreciate it!",
+          duration: 5000,
+        })
+        // Close modal after a short delay to show the success message
+        setTimeout(() => {
+          closeFeedbackModal()
+        }, 1000)
+      } else {
+        throw new Error("Failed to send feedback")
+      }
+    } catch (error) {
+      toast({
+        title: "Error sending feedback",
+        description: "Please try again later.",
+        variant: "destructive",
+        duration: 5000,
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
   // Animation variants
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -1033,7 +1150,7 @@ export default function AdvancedTechWebsite() {
         staggerChildren: 0.2,
       },
     },
-  }
+  };
 
   const itemVariants = {
     hidden: { y: 20, opacity: 0 },
@@ -1045,7 +1162,7 @@ export default function AdvancedTechWebsite() {
         stiffness: 100,
       },
     },
-  }
+  };
 
   const codeAnimationVariants = {
     hidden: { opacity: 0, scale: 0 },
@@ -1058,30 +1175,13 @@ export default function AdvancedTechWebsite() {
         damping: 10,
       },
     },
-  }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-purple-950 to-slate-950 text-white overflow-x-hidden relative">
       {/* Toast notifications */}
       <Toaster />
 
-      {/* Enhanced Animated Cursor */}
-      <motion.div
-        className="fixed w-8 h-8 bg-gradient-to-r from-cyan-400 to-purple-500 rounded-full pointer-events-none z-50 mix-blend-difference"
-        style={{
-          left: mousePosition.x - 16,
-          top: mousePosition.y - 16,
-        }}
-        animate={{
-          scale: [1, 1.5, 1],
-          rotate: [0, 180, 360],
-        }}
-        transition={{
-          duration: 2,
-          repeat: Number.POSITIVE_INFINITY,
-          ease: "easeInOut",
-        }}
-      />
 
       {/* Enhanced Floating Code Elements with More Animations */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
@@ -1412,7 +1512,7 @@ export default function AdvancedTechWebsite() {
                       </div>
                     </div>
 
-                    <div className="mt-8 flex gap-4">
+                    <div className="mt-8">
                       <Button
                         className="bg-gradient-to-r from-cyan-600 to-purple-600 hover:from-cyan-700 hover:to-purple-700"
                         onClick={() => {
@@ -1422,20 +1522,6 @@ export default function AdvancedTechWebsite() {
                       >
                         <MessageSquare className="w-4 h-4 mr-2" />
                         Get Started
-                      </Button>
-                      <Button
-                        variant="outline"
-                        className="border-white/20 text-white hover:bg-white/10 bg-transparent"
-                        onClick={() =>
-                          toast({
-                            title: "Download Brochure",
-                            description: "Brochure would be downloaded in a real implementation.",
-                            duration: 3000,
-                          })
-                        }
-                      >
-                        <Download className="w-4 h-4 mr-2" />
-                        Download Brochure
                       </Button>
                     </div>
                   </div>
@@ -1652,62 +1738,6 @@ export default function AdvancedTechWebsite() {
                           </div>
                         </div>
 
-                        <div>
-                          <h3 className="text-2xl font-bold mb-4 text-white">Connect</h3>
-                          <div className="flex space-x-4">
-                            <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="border-white/20 text-white hover:bg-white/10 bg-transparent"
-                                onClick={() =>
-                                  toast({
-                                    title: "LinkedIn Profile",
-                                    description: "LinkedIn profile would open in a real implementation.",
-                                    duration: 3000,
-                                  })
-                                }
-                              >
-                                <Linkedin className="w-4 h-4 mr-2" />
-                                LinkedIn
-                              </Button>
-                            </motion.div>
-                            <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="border-white/20 text-white hover:bg-white/10 bg-transparent"
-                                onClick={() =>
-                                  toast({
-                                    title: "GitHub Profile",
-                                    description: "GitHub profile would open in a real implementation.",
-                                    duration: 3000,
-                                  })
-                                }
-                              >
-                                <Github className="w-4 h-4 mr-2" />
-                                GitHub
-                              </Button>
-                            </motion.div>
-                            <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="border-white/20 text-white hover:bg-white/10 bg-transparent"
-                                onClick={() =>
-                                  toast({
-                                    title: "Twitter Profile",
-                                    description: "Twitter profile would open in a real implementation.",
-                                    duration: 3000,
-                                  })
-                                }
-                              >
-                                <Twitter className="w-4 h-4 mr-2" />
-                                Twitter
-                              </Button>
-                            </motion.div>
-                          </div>
-                        </div>
                       </div>
                     </div>
                   </div>
@@ -2305,12 +2335,11 @@ export default function AdvancedTechWebsite() {
       <section
         ref={sectionRefs.home}
         id="home"
-        className="relative min-h-screen flex items-center justify-center overflow-hidden"
+        className="relative min-h-screen flex items-center justify-center overflow-hidden py-16"
       >
         {/* Enhanced Background Effects */}
         <div className="absolute inset-0">
           <motion.div
-            style={{ y, rotate }}
             className="absolute inset-0 bg-gradient-to-br from-cyan-900/20 via-purple-900/30 to-pink-900/20"
           />
 
@@ -2345,36 +2374,13 @@ export default function AdvancedTechWebsite() {
           <div className="absolute inset-0 pointer-events-none bg-[url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http://www.w3.org/2000/svg%22%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%3E%3Ccircle%20cx%3D%2230%22%20cy%3D%2230%22%20r%3D%221%22%20fill%3D%22white%22%20fill-opacity%3D%220.04%22/%3E%3C/svg%3E')] opacity-40" />
         </div>
 
-        <motion.div style={{ opacity, scale }} className="relative z-10 text-center px-6 max-w-7xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 1, delay: 0.5 }}
-            className="mb-8"
-          >
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              className="cursor-pointer"
-              onClick={() =>
-                toast({
-                  title: "Next-Generation Technology",
-                  description: "We use cutting-edge technologies to build the future.",
-                  duration: 3000,
-                })
-              }
-            >
-              <Badge className="bg-gradient-to-r from-cyan-500/20 to-purple-500/20 text-cyan-300 border-cyan-500/30 px-6 py-2 text-sm font-medium">
-                <Sparkles className="w-4 h-4 mr-2" />
-                Next-Generation Technology Solutions
-              </Badge>
-            </motion.div>
-          </motion.div>
+        <motion.div className="relative z-10 text-center px-6 max-w-8xl mx-auto">
 
           <motion.h1
             variants={containerVariants}
             initial="hidden"
             animate="visible"
-            className="text-6xl md:text-8xl lg:text-9xl font-bold mb-8 leading-tight"
+            className="text-5xl sm:text-6xl md:text-8xl lg:text-9xl xl:text-[10rem] font-bold mb-6 leading-tight"
           >
             <motion.span
               variants={itemVariants}
@@ -2421,7 +2427,7 @@ export default function AdvancedTechWebsite() {
             initial={{ y: 50, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ duration: 0.8, delay: 0.8 }}
-            className="text-xl md:text-2xl lg:text-3xl text-gray-300 mb-12 max-w-4xl mx-auto leading-relaxed cursor-pointer"
+            className="text-lg md:text-xl lg:text-2xl text-gray-300 mb-8 max-w-4xl mx-auto leading-relaxed cursor-pointer"
             onClick={() =>
               toast({
                 title: "Our Mission",
@@ -2431,20 +2437,19 @@ export default function AdvancedTechWebsite() {
               })
             }
           >
-            Revolutionary software development, digital marketing strategies, and professional media production that transform your business into a
-            digital empire through cutting-edge innovation and market dominance
+            Revolutionary software development, digital marketing strategies, and professional media production that transform your business into a digital empire
           </motion.p>
 
           <motion.div
             initial={{ y: 50, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ duration: 0.8, delay: 1 }}
-            className="flex flex-col sm:flex-row gap-6 justify-center items-center mb-16"
+            className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-8"
           >
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
               <Button
                 size="lg"
-                className="bg-gradient-to-r from-cyan-600 to-purple-600 hover:from-cyan-700 hover:to-purple-700 text-lg px-10 py-8 rounded-2xl shadow-2xl shadow-purple-500/25 group relative overflow-hidden"
+                className="bg-gradient-to-r from-cyan-600 to-purple-600 hover:from-cyan-700 hover:to-purple-700 text-base px-8 py-6 rounded-2xl shadow-2xl shadow-purple-500/25 group relative overflow-hidden"
                 onClick={() => scrollToSection("contact")}
               >
                 <motion.div
@@ -2463,7 +2468,7 @@ export default function AdvancedTechWebsite() {
               <Button
                 size="lg"
                 variant="outline"
-                className="border-2 border-white/20 text-white hover:bg-white/10 text-lg px-10 py-8 rounded-2xl backdrop-blur-sm group bg-transparent"
+                className="border-2 border-white/20 text-white hover:bg-white/10 text-base px-8 py-6 rounded-2xl backdrop-blur-sm group bg-transparent"
                 onClick={handleVideoPlay}
               >
                 <Play className="mr-3 group-hover:scale-110 transition-transform duration-300" />
@@ -2477,7 +2482,7 @@ export default function AdvancedTechWebsite() {
             initial={{ y: 100, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ duration: 1, delay: 1.2 }}
-            className="grid grid-cols-2 md:grid-cols-4 gap-8 max-w-4xl mx-auto"
+            className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-6xl mx-auto"
           >
             {Object.entries(statDetails).map(([key, stat], index) => (
               <motion.div
@@ -2486,19 +2491,19 @@ export default function AdvancedTechWebsite() {
                 animate={{ scale: 1, rotate: 0 }}
                 transition={{ delay: 1.4 + index * 0.1, type: "spring" as const, stiffness: 200 }}
                 whileHover={{ scale: 1.1, y: -5 }}
-                className="text-center p-6 rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 hover:border-white/20 transition-all duration-300 cursor-pointer"
+                className="text-center p-4 md:p-6 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 hover:border-white/20 transition-all duration-300 cursor-pointer aspect-square md:aspect-auto flex flex-col justify-center"
                 onClick={() => openModal("stat", stat)}
               >
                 <motion.div
                   animate={{ rotate: [0, 10, -10, 0] }}
                   transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY }}
                 >
-                  <stat.icon className="w-8 h-8 mx-auto mb-3 text-cyan-400" />
+                  <stat.icon className="w-6 h-6 mx-auto mb-2 text-cyan-400" />
                 </motion.div>
-                <div className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-cyan-400 to-purple-500 bg-clip-text text-transparent mb-2">
+                <div className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-cyan-400 to-purple-500 bg-clip-text text-transparent mb-1">
                   {stat.number}
                 </div>
-                <div className="text-gray-300 text-sm">{stat.label}</div>
+                <div className="text-gray-300 text-xs">{stat.label}</div>
               </motion.div>
             ))}
           </motion.div>
@@ -2506,10 +2511,10 @@ export default function AdvancedTechWebsite() {
       </section>
 
       {/* Enhanced Services Section */}
-      <section ref={sectionRefs.services} id="services" className="py-20 relative">
+      <section ref={sectionRefs.services} id="services" className="py-2 relative">
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-cyan-900/5 to-transparent" />
 
-        <div className="container mx-auto px-6 relative z-10">
+        <div className="container mx-auto px-2 relative z-10 max-w-8xl">
           <motion.div
             initial={{ y: 100, opacity: 0 }}
             whileInView={{ y: 0, opacity: 1 }}
@@ -2568,7 +2573,16 @@ export default function AdvancedTechWebsite() {
             </p>
           </motion.div>
 
-          <div className="flex gap-8 overflow-x-auto pb-6 scrollbar-hide mb-12">
+          <div className="relative">
+            <button
+              aria-label="Previous"
+              onClick={() => scrollHorizontally(servicesScrollRef, "left")}
+              className="flex items-center justify-center absolute -left-2 md:-left-4 top-1/2 -translate-y-1/2 w-8 h-8 md:w-10 md:h-10 rounded-full border border-white/30 bg-black/50 hover:bg-black/70 z-10"
+            >
+              <span className="sr-only">Previous</span>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 md:w-5 md:h-5 text-white"><path fillRule="evenodd" d="M15.78 3.72a.75.75 0 010 1.06L9.56 11l6.22 6.22a.75.75 0 11-1.06 1.06l-6.75-6.75a.75.75 0 010-1.06l6.75-6.75a.75.75 0 011.06 0z" clipRule="evenodd" /></svg>
+            </button>
+            <div ref={servicesScrollRef} className="flex gap-6 overflow-x-hidden pb-4 snap-x snap-mandatory">
             {[
               {
                 icon: Code,
@@ -2642,7 +2656,7 @@ export default function AdvancedTechWebsite() {
                 viewport={{ once: true }}
                 transition={{ delay: index * 0.2, duration: 0.8 }}
                 whileHover={{ y: -10, scale: 1.02 }}
-                className="group relative cursor-pointer flex-shrink-0 w-80"
+                className="group relative cursor-pointer w-96 snap-start flex-shrink-0"
                 onClick={() => {
                   const serviceData = serviceDetails[service.title];
                   if (serviceData) {
@@ -2664,8 +2678,8 @@ export default function AdvancedTechWebsite() {
               >
                 <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-white/0 rounded-3xl blur-sm group-hover:blur-md transition-all duration-500" />
                 <Card className="relative bg-black/80 border border-white/30 transition-all duration-500 h-full rounded-3xl overflow-hidden">
-                  <CardContent className="p-8 relative z-10">
-                    <div className="mb-8">
+                  <CardContent className="p-6 relative z-10">
+                    <div className="mb-4">
                       <motion.div
                         whileHover={{ rotate: 360, scale: 1.1 }}
                         transition={{ duration: 0.5 }}
@@ -2687,11 +2701,11 @@ export default function AdvancedTechWebsite() {
                       <h3 className="text-2xl md:text-3xl font-bold mb-4 group-hover:text-cyan-300 transition-colors duration-300 text-white drop-shadow-lg">
                         {service.title}
                       </h3>
-                      <p className="text-white mb-8 leading-relaxed text-lg drop-shadow-lg">{service.description}</p>
+                      <p className="text-white mb-6 leading-relaxed text-base drop-shadow-lg">{service.description}</p>
 
                     </div>
 
-                    <div className="space-y-4">
+                    <div className="space-y-2">
                       {service.features.map((feature, i) => (
                         <motion.div
                           key={i}
@@ -2718,10 +2732,10 @@ export default function AdvancedTechWebsite() {
                           {feature}
                         </motion.div>
                       ))}
-                    </div>
+            </div>
 
-                    <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="mt-8">
-                                              <Button
+                    <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="mt-4">
+                      <Button
                           variant="outline"
                           className="w-full border-white/30 text-white hover:bg-white/20 bg-white/5 group/btn"
                           onClick={(e) => {
@@ -2752,15 +2766,24 @@ export default function AdvancedTechWebsite() {
                 </Card>
               </motion.div>
             ))}
-          </div>
+            </div>
+            <button
+              aria-label="Next"
+              onClick={() => scrollHorizontally(servicesScrollRef, "right")}
+              className="flex items-center justify-center absolute -right-2 md:-right-4 top-1/2 -translate-y-1/2 w-8 h-8 md:w-10 md:h-10 rounded-full border border-white/30 bg-black/50 hover:bg-black/70 z-10"
+            >
+              <span className="sr-only">Next</span>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 md:w-5 md:h-5 text-white"><path fillRule="evenodd" d="M8.22 20.28a.75.75 0 010-1.06L14.44 13 8.22 6.78a.75.75 0 111.06-1.06l6.75 6.75a.75.75 0 010 1.06l-6.75 6.75a.75.75 0 01-1.06 0z" clipRule="evenodd" /></svg>
+            </button>
+        </div>
         </div>
       </section>
 
       {/* Enhanced Solutions Section */}
-      <section ref={sectionRefs.solutions} id="solutions" className="py-20 relative">
+      <section ref={sectionRefs.solutions} id="solutions" className="py-2 relative">
         <div className="absolute inset-0 bg-gradient-to-r from-purple-900/10 to-cyan-900/10" />
 
-        <div className="container mx-auto px-6 relative z-10">
+        <div className="container mx-auto px-2 relative z-10 max-w-8xl">
           <motion.div
             initial={{ y: 100, opacity: 0 }}
             whileInView={{ y: 0, opacity: 1 }}
@@ -2787,7 +2810,7 @@ export default function AdvancedTechWebsite() {
             </p>
           </motion.div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
             {[
               { name: "React", icon: "⚛️", color: "from-blue-500 to-cyan-500" },
               { name: "Next.js", icon: "▲", color: "from-gray-700 to-gray-900" },
@@ -2805,7 +2828,7 @@ export default function AdvancedTechWebsite() {
               { name: "DaVinci", icon: "🎬", color: "from-orange-500 to-red-600" },
               { name: "Cinema 4D", icon: "🎭", color: "from-blue-500 to-purple-600" },
               { name: "Pro Tools", icon: "🎵", color: "from-green-500 to-blue-600" },
-            ].map((tech, index) => (
+            ].slice(0, showAllTechnologies ? 16 : 4).map((tech, index) => (
               <motion.div
                 key={index}
                 initial={{ scale: 0, rotate: -180 }}
@@ -2837,12 +2860,27 @@ export default function AdvancedTechWebsite() {
               </motion.div>
             ))}
           </div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mt-8"
+          >
+            <Button
+              onClick={() => setShowAllTechnologies(!showAllTechnologies)}
+              className="bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-600 hover:to-purple-700 text-white px-8 py-3 rounded-full font-medium transition-all duration-300 transform hover:scale-105"
+            >
+              {showAllTechnologies ? "Read Less" : "Read More"}
+              <ArrowRight className={`ml-2 w-4 h-4 transition-transform duration-300 ${showAllTechnologies ? 'rotate-180' : ''}`} />
+            </Button>
+          </motion.div>
         </div>
       </section>
 
       {/* Enhanced Portfolio Section */}
-      <section ref={sectionRefs.portfolio} id="portfolio" className="py-20 relative">
-        <div className="container mx-auto px-6">
+      <section ref={sectionRefs.portfolio} id="portfolio" className="py-2 relative">
+        <div className="container mx-auto px-2 max-w-8xl">
           <motion.div
             initial={{ y: 100, opacity: 0 }}
             whileInView={{ y: 0, opacity: 1 }}
@@ -2964,142 +3002,162 @@ export default function AdvancedTechWebsite() {
             </div>
           </motion.div>
 
-          <div className="flex gap-8 overflow-x-auto pb-6 scrollbar-hide">
-            {Object.entries(portfolioDetails).map(([key, project], index) => (
-              <motion.div
-                key={key}
-                initial={{ y: 100, opacity: 0 }}
-                whileInView={{ y: 0, opacity: 1 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.2 }}
-                whileHover={{ y: -10 }}
-                className="group relative cursor-pointer flex-shrink-0 w-96"
-                onClick={() => openModal("portfolio", project)}
-              >
-                <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-white/0 rounded-3xl blur-xl group-hover:blur-2xl transition-all duration-500" />
-                <Card className="relative bg-black/80 backdrop-blur-xl border border-white/10 hover:border-white/20 transition-all duration-500 overflow-hidden rounded-3xl">
-                  <div className="relative overflow-hidden">
-                    <div className={`w-full h-64 bg-gradient-to-br ${
-                      project.category === "Media Production" 
-                        ? "from-orange-500/10 to-red-500/10" 
-                        : "from-cyan-500/10 to-purple-500/10"
-                    } flex items-center justify-center`}>
-                      <div className="text-center">
-                        {project.category === "Media Production" ? (
-                          <Video className="w-16 h-16 text-orange-400 mx-auto mb-4" />
-                        ) : (
-                          <Code className="w-16 h-16 text-cyan-400 mx-auto mb-4" />
-                        )}
-                        <h4 className="text-xl font-bold text-white">{project.title}</h4>
+          <div className="relative">
+            <button
+              aria-label="Previous"
+              onClick={() => scrollHorizontally(portfolioScrollRef, "left")}
+              className="flex items-center justify-center absolute -left-2 md:-left-4 top-1/2 -translate-y-1/2 w-8 h-8 md:w-10 md:h-10 rounded-full border border-white/30 bg-black/50 hover:bg-black/70 z-10"
+            >
+              <span className="sr-only">Previous</span>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 md:w-5 md:h-5 text-white"><path fillRule="evenodd" d="M15.78 3.72a.75.75 0 010 1.06L9.56 11l6.22 6.22a.75.75 0 11-1.06 1.06l-6.75-6.75a.75.75 0 010-1.06l6.75-6.75a.75.75 0 011.06 0z" clipRule="evenodd" /></svg>
+            </button>
+            <div ref={portfolioScrollRef} className="flex gap-6 overflow-x-hidden pb-4 snap-x snap-mandatory">
+              {Object.entries(portfolioDetails).map(([key, project], index) => (
+                <motion.div
+                  key={key}
+                  initial={{ y: 100, opacity: 0 }}
+                  whileInView={{ y: 0, opacity: 1 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: index * 0.2 }}
+                  whileHover={{ y: -10 }}
+                  className="group relative cursor-pointer w-96 snap-start flex-shrink-0"
+                  onClick={() => openModal("portfolio", project)}
+                >
+                  <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-white/0 rounded-3xl blur-xl group-hover:blur-2xl transition-all duration-500" />
+                  <Card className="relative bg-black/80 backdrop-blur-xl border border-white/10 hover:border-white/20 transition-all duration-500 overflow-hidden rounded-3xl">
+                    <div className="relative overflow-hidden">
+                      <div className={`w-full h-64 bg-gradient-to-br ${
+                        project.category === "Healthcare Technology" ? "from-blue-500/20 to-cyan-500/20" :
+                        project.category === "E-commerce Platform" ? "from-purple-500/20 to-pink-500/20" :
+                        project.category === "Logistics Technology" ? "from-green-500/20 to-emerald-500/20" :
+                        project.category === "Financial Technology" ? "from-yellow-500/20 to-orange-500/20" :
+                        project.category === "Educational Technology" ? "from-indigo-500/20 to-purple-500/20" :
+                        project.category === "Media Production" ? "from-orange-500/20 to-red-500/20" :
+                        "from-cyan-500/20 to-blue-500/20"
+                      } rounded-t-3xl flex items-center justify-center`}>
+                        <Code className="w-16 h-16 text-white/80" />
                       </div>
-                    </div>
-                    <div className="absolute top-6 left-6">
-                      <motion.div
-                        whileHover={{ scale: 1.1 }}
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          toast({
-                            title: project.category,
-                            description: "Category details would be shown in a real implementation.",
-                            duration: 3000,
-                          })
-                        }}
-                      >
-                        <Badge className={`bg-gradient-to-r ${
-                          project.category === "Media Production" 
-                            ? "from-orange-500 to-red-500" 
-                            : "from-purple-500 to-pink-500"
-                        } text-white border-0`}>
-                          {project.category}
-                        </Badge>
-                      </motion.div>
-                    </div>
-                    <div className="absolute bottom-6 left-6 right-6">
-                      <div className="flex flex-wrap gap-2">
-                        {project.technologies.slice(0, 3).map((tech, i) => (
-                          <motion.div
-                            key={i}
-                            whileHover={{ scale: 1.1 }}
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              openModal(
-                                "technology",
-                                technologyDetails[tech] || {
-                                  name: tech,
-                                  description: `Learn more about ${tech}`,
-                                },
-                              )
-                            }}
-                          >
-                            <Badge
-                              variant="outline"
-                              className="border-white/30 text-white bg-black/30 backdrop-blur-sm cursor-pointer hover:bg-white/20 transition-colors"
-                            >
-                              {tech}
-                            </Badge>
-                          </motion.div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  <CardContent className="p-8">
-                    <h3 className="text-2xl font-bold mb-3 group-hover:text-cyan-300 transition-colors duration-300 text-white">
-                      {project.title}
-                    </h3>
-                    <p className="text-gray-300 mb-6 leading-relaxed">{project.description}</p>
-
-                    <div className="grid grid-cols-3 gap-4 mb-6">
-                      {project.results.slice(0, 3).map((metric, i) => (
+                      <div className="absolute top-6 left-6">
                         <motion.div
-                          key={i}
-                          whileHover={{ scale: 1.05 }}
-                          className="text-center p-3 rounded-xl bg-white/5 cursor-pointer"
+                          whileHover={{ scale: 1.1 }}
                           onClick={(e) => {
                             e.stopPropagation()
                             toast({
-                              title: "Result Details",
-                              description: metric,
+                              title: project.category,
+                              description: "Category details would be shown in a real implementation.",
                               duration: 3000,
                             })
                           }}
                         >
-                          <div
-                            className={`text-lg font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent`}
-                          >
-                            {metric.split(" ")[0]}
-                          </div>
-                          <div className="text-xs text-gray-400">{metric.split(" ").slice(1).join(" ")}</div>
+                          <Badge className={`bg-gradient-to-r ${
+                            project.category === "Healthcare Technology" ? "from-pink-500 to-purple-500" :
+                            project.category === "E-commerce Platform" ? "from-purple-500 to-pink-500" :
+                            project.category === "Logistics Technology" ? "from-orange-500 to-red-500" :
+                            project.category === "Financial Technology" ? "from-yellow-500 to-orange-500" :
+                            project.category === "Educational Technology" ? "from-indigo-500 to-purple-500" :
+                            project.category === "Media Production" ? "from-orange-500 to-red-500" :
+                            "from-cyan-500 to-purple-500"
+                          } text-white border-0`}>
+                            {project.category}
+                          </Badge>
                         </motion.div>
-                      ))}
+                      </div>
+                      <div className="absolute bottom-6 left-6 right-6">
+                        <div className="flex flex-wrap gap-2">
+                          {project.technologies.slice(0, 3).map((tech, i) => (
+                            <motion.div
+                              key={i}
+                              whileHover={{ scale: 1.1 }}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                openModal(
+                                  "technology",
+                                  technologyDetails[tech] || {
+                                    name: tech,
+                                    description: `Learn more about ${tech}`,
+                                  },
+                                )
+                              }}
+                            >
+                              <Badge
+                                variant="outline"
+                                className="border-white/30 text-white bg-black/30 backdrop-blur-sm cursor-pointer hover:bg-white/20 transition-colors"
+                              >
+                                {tech}
+                              </Badge>
+                            </motion.div>
+                          ))}
+                        </div>
+                      </div>
                     </div>
 
-                    <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                      <Button
-                        variant="outline"
-                        className="w-full border-white/20 text-white hover:bg-white/10 bg-transparent group/btn"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          openModal("portfolio", project)
-                        }}
+                    <CardContent className="p-8">
+                      <h3 className="text-2xl font-bold mb-4 group-hover:text-cyan-300 transition-colors duration-300 text-white">
+                        {project.title}
+                      </h3>
+                      <p className="text-gray-300 mb-6 leading-relaxed">{project.description}</p>
+
+                      <div className="grid grid-cols-3 gap-4 mb-6">
+                        {project.results.slice(0, 3).map((metric, i) => (
+                          <motion.div
+                            key={i}
+                            whileHover={{ scale: 1.05 }}
+                            className="text-center p-3 rounded-xl bg-white/5 cursor-pointer"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              toast({
+                                title: "Result Details",
+                                description: metric,
+                                duration: 3000,
+                              })
+                            }}
+                          >
+                            <div className={`text-lg font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent`}>
+                              {metric.split(" ")[0]}
+                            </div>
+                            <div className="text-xs text-gray-400">{metric.split(" ").slice(1).join(" ")}</div>
+                          </motion.div>
+                        ))}
+                      </div>
+
+                      <motion.div
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
                       >
-                        View Case Study
-                        <ArrowRight className="ml-2 w-4 h-4 group-hover/btn:translate-x-1 transition-transform duration-300" />
-                      </Button>
-                    </motion.div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))}
+                        <Button
+                          variant="outline"
+                          className="w-full border-white/20 text-white hover:bg-white/10 bg-transparent group/btn"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            openModal("portfolio", project)
+                          }}
+                        >
+                          View Case Study
+                          <ArrowRight className="ml-2 w-4 h-4 group-hover/btn:translate-x-1 transition-transform duration-300" />
+                        </Button>
+                      </motion.div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ))}
+            </div>
+            <button
+              aria-label="Next"
+              onClick={() => scrollHorizontally(portfolioScrollRef, "right")}
+              className="flex items-center justify-center absolute -right-2 md:-right-4 top-1/2 -translate-y-1/2 w-8 h-8 md:w-10 md:h-10 rounded-full border border-white/30 bg-black/50 hover:bg-black/70 z-10"
+            >
+              <span className="sr-only">Next</span>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 md:w-5 md:h-5 text-white"><path fillRule="evenodd" d="M8.22 20.28a.75.75 0 010-1.06L14.44 13 8.22 6.78a.75.75 0 111.06-1.06l6.75 6.75a.75.75 0 010 1.06l-6.75 6.75a.75.75 0 01-1.06 0z" clipRule="evenodd" /></svg>
+            </button>
           </div>
         </div>
       </section>
 
       {/* Enhanced Team Section */}
-      <section ref={sectionRefs.team} id="team" className="py-20 relative">
+      <section ref={sectionRefs.team} id="team" className="py-2 relative">
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-purple-900/5 to-transparent" />
 
-        <div className="container mx-auto px-6 relative z-10">
+        <div className="container mx-auto px-2 relative z-10 max-w-8xl">
           <motion.div
             initial={{ y: 100, opacity: 0 }}
             whileInView={{ y: 0, opacity: 1 }}
@@ -3140,7 +3198,16 @@ export default function AdvancedTechWebsite() {
             </p>
           </motion.div>
 
-          <div className="flex gap-8 overflow-x-auto pb-6 scrollbar-hide">
+          <div className="relative">
+            <button
+              aria-label="Previous"
+              onClick={() => scrollHorizontally(teamScrollRef, "left")}
+              className="flex items-center justify-center absolute -left-2 md:-left-4 top-1/2 -translate-y-1/2 w-8 h-8 md:w-10 md:h-10 rounded-full border border-white/30 bg-black/50 hover:bg-black/70 z-10"
+            >
+              <span className="sr-only">Previous</span>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 md:w-5 md:h-5 text-white"><path fillRule="evenodd" d="M15.78 3.72a.75.75 0 010 1.06L9.56 11l6.22 6.22a.75.75 0 11-1.06 1.06l-6.75-6.75a.75.75 0 010-1.06l6.75-6.75a.75.75 0 011.06 0z" clipRule="evenodd" /></svg>
+            </button>
+            <div ref={teamScrollRef} className="flex gap-8 overflow-x-hidden pb-6">
             {Object.entries(teamDetails).map(([key, member], index) => (
               <motion.div
                 key={key}
@@ -3149,73 +3216,38 @@ export default function AdvancedTechWebsite() {
                 viewport={{ once: true }}
                 transition={{ delay: index * 0.1 }}
                 whileHover={{ y: -10 }}
-                className="group cursor-pointer flex-shrink-0 w-72"
+                className="group cursor-pointer flex-shrink-0 w-80"
                 onClick={() => openModal("team", member)}
               >
-                <Card className="bg-white/5 backdrop-blur-xl border border-white/10 hover:border-white/20 transition-all duration-500 overflow-hidden rounded-3xl">
-                  <CardContent className="p-6 text-center">
+                  <Card className="bg-white/5 backdrop-blur-xl border border-white/10 hover:border-white/20 transition-all duration-500 overflow-hidden rounded-3xl">
+                  <CardContent className="p-8 text-center">
                     <div className="w-20 h-20 bg-gradient-to-r from-cyan-500/20 to-purple-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
                       <Users className="w-10 h-10 text-cyan-400" />
                     </div>
                     <h3 className="text-xl font-bold mb-2 text-white">{member.name}</h3>
-                    <p className="text-cyan-400 mb-2">{member.role}</p>
+                    <p className="text-cyan-400 mb-2 text-base">{member.role}</p>
                     <p className="text-gray-300 text-sm mb-4">{member.expertise}</p>
 
-                    <div className="flex justify-center space-x-4">
-                      <motion.button
-                        whileHover={{ scale: 1.2, y: -2 }}
-                        className="text-gray-400 hover:text-cyan-400 transition-colors"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          toast({
-                            title: `Connect with ${member.name}`,
-                            description: "LinkedIn profile would open in a real implementation.",
-                            duration: 3000,
-                          })
-                        }}
-                      >
-                        <Linkedin className="w-5 h-5" />
-                      </motion.button>
-                      <motion.button
-                        whileHover={{ scale: 1.2, y: -2 }}
-                        className="text-gray-400 hover:text-cyan-400 transition-colors"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          toast({
-                            title: `${member.name}'s GitHub`,
-                            description: "GitHub profile would open in a real implementation.",
-                            duration: 3000,
-                          })
-                        }}
-                      >
-                        <Github className="w-5 h-5" />
-                      </motion.button>
-                      <motion.button
-                        whileHover={{ scale: 1.2, y: -2 }}
-                        className="text-gray-400 hover:text-cyan-400 transition-colors"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          toast({
-                            title: `Follow ${member.name}`,
-                            description: "Twitter profile would open in a real implementation.",
-                            duration: 3000,
-                          })
-                        }}
-                      >
-                        <Twitter className="w-5 h-5" />
-                      </motion.button>
-                    </div>
                   </CardContent>
                 </Card>
               </motion.div>
             ))}
+            </div>
+            <button
+              aria-label="Next"
+              onClick={() => scrollHorizontally(teamScrollRef, "right")}
+              className="flex items-center justify-center absolute -right-2 md:-right-4 top-1/2 -translate-y-1/2 w-8 h-8 md:w-10 md:h-10 rounded-full border border-white/30 bg-black/50 hover:bg-black/70 z-10"
+            >
+              <span className="sr-only">Next</span>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 md:w-5 md:h-5 text-white"><path fillRule="evenodd" d="M8.22 20.28a.75.75 0 010-1.06L14.44 13 8.22 6.78a.75.75 0 111.06-1.06l6.75 6.75a.75.75 0 010 1.06l-6.75 6.75a.75.75 0 01-1.06 0z" clipRule="evenodd" /></svg>
+            </button>
           </div>
         </div>
       </section>
 
       {/* Enhanced Insights Section */}
-      <section ref={sectionRefs.insights} id="insights" className="py-20 relative">
-        <div className="container mx-auto px-6">
+      <section ref={sectionRefs.insights} id="insights" className="py-2 relative">
+        <div className="container mx-auto px-2 max-w-8xl">
           <motion.div
             initial={{ y: 100, opacity: 0 }}
             whileInView={{ y: 0, opacity: 1 }}
@@ -3239,7 +3271,7 @@ export default function AdvancedTechWebsite() {
             initial={{ y: 100, opacity: 0 }}
             whileInView={{ y: 0, opacity: 1 }}
             viewport={{ once: true }}
-            className="mt-20"
+            className="mt-8"
           >
             <div className="text-center mb-12">
               <motion.h3
@@ -3257,10 +3289,35 @@ export default function AdvancedTechWebsite() {
                   Client Success Stories
                 </span>
               </motion.h3>
-              <p className="text-xl text-gray-300">Real testimonials from our satisfied clients</p>
+              <p className="text-xl text-gray-300 mb-8">Real testimonials from our satisfied clients</p>
+              
+              {/* Add Feedback Button */}
+              <motion.div
+                initial={{ y: 20, opacity: 0 }}
+                whileInView={{ y: 0, opacity: 1 }}
+                viewport={{ once: true }}
+                transition={{ delay: 0.3 }}
+              >
+                <Button
+                  className="bg-gradient-to-r from-cyan-600 to-purple-600 hover:from-cyan-700 hover:to-purple-700 text-white px-8 py-3 rounded-full font-semibold"
+                  onClick={openFeedbackModal}
+                >
+                  <MessageSquare className="w-5 h-5 mr-2" />
+                  Share Your Feedback
+                </Button>
+              </motion.div>
             </div>
 
-            <div className="flex gap-6 overflow-x-auto pb-6 scrollbar-hide">
+            <div className="relative">
+              <button
+                aria-label="Previous"
+                onClick={() => scrollHorizontally(testimonialsScrollRef, "left")}
+                className="flex items-center justify-center absolute -left-2 md:-left-4 top-1/2 -translate-y-1/2 w-8 h-8 md:w-10 md:h-10 rounded-full border border-white/30 bg-black/50 hover:bg-black/70 z-10"
+              >
+                <span className="sr-only">Previous</span>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 md:w-5 md:h-5 text-white"><path fillRule="evenodd" d="M15.78 3.72a.75.75 0 010 1.06L9.56 11l6.22 6.22a.75.75 0 11-1.06 1.06l-6.75-6.75a.75.75 0 010-1.06l6.75-6.75a.75.75 0 011.06 0z" clipRule="evenodd" /></svg>
+              </button>
+              <div ref={testimonialsScrollRef} className="flex gap-6 overflow-x-hidden pb-4 snap-x snap-mandatory">
               {Object.entries(testimonialDetails).map(([key, testimonial], index) => (
                 <motion.div
                   key={key}
@@ -3269,11 +3326,11 @@ export default function AdvancedTechWebsite() {
                   viewport={{ once: true }}
                   transition={{ delay: index * 0.2 }}
                   whileHover={{ y: -5, scale: 1.02 }}
-                  className="group cursor-pointer flex-shrink-0 w-80"
+                  className="group cursor-pointer w-96 snap-start flex-shrink-0"
                   onClick={() => openModal("testimonial", testimonial)}
                 >
-                  <Card className="bg-black/80 backdrop-blur-xl border border-white/10 hover:border-white/20 transition-all duration-500 h-full rounded-3xl p-6">
-                    <div className="flex mb-4">
+                  <Card className="bg-black/80 backdrop-blur-xl border border-white/10 hover:border-white/20 transition-all duration-500 rounded-3xl p-8 overflow-hidden">
+                    <div className="flex mb-6">
                       {[...Array(testimonial.rating)].map((_, i) => (
                         <motion.div
                           key={i}
@@ -3282,29 +3339,29 @@ export default function AdvancedTechWebsite() {
                           viewport={{ once: true }}
                           transition={{ delay: index * 0.2 + i * 0.1, type: "spring" as const }}
                         >
-                          <Star className="w-4 h-4 text-yellow-400 fill-current" />
+                          <Star className="w-5 h-5 text-yellow-400 fill-current" />
                         </motion.div>
                       ))}
                     </div>
 
-                    <blockquote className="text-gray-300 mb-6 text-base leading-relaxed italic">
+                    <blockquote className="text-gray-300 mb-6 text-lg leading-relaxed italic">
                       "{testimonial.content}"
                     </blockquote>
 
                     <div className="flex items-center">
-                      <div className="w-10 h-10 bg-gradient-to-r from-cyan-500/20 to-purple-500/20 rounded-full flex items-center justify-center mr-3">
-                        <Users className="w-5 h-5 text-cyan-400" />
+                      <div className="w-12 h-12 bg-gradient-to-r from-cyan-500/20 to-purple-500/20 rounded-full flex items-center justify-center mr-4">
+                        <Users className="w-6 h-6 text-cyan-400" />
                       </div>
                       <div>
-                        <div className="font-semibold text-white text-sm">{testimonial.name}</div>
-                        <div className="text-cyan-400 text-xs">{testimonial.role}</div>
-                        <div className="text-gray-400 text-xs">{testimonial.company}</div>
+                        <div className="font-semibold text-white text-base">{testimonial.name}</div>
+                        <div className="text-cyan-400 text-sm">{testimonial.role}</div>
+                        <div className="text-gray-400 text-sm">{testimonial.company}</div>
                       </div>
                     </div>
 
                     <motion.div
                       whileHover={{ scale: 1.05 }}
-                      className="mt-4 p-2 bg-white/5 rounded-lg cursor-pointer"
+                      className="mt-4 p-3 bg-white/5 rounded-lg cursor-pointer"
                       onClick={(e) => {
                         e.stopPropagation()
                         toast({
@@ -3320,16 +3377,25 @@ export default function AdvancedTechWebsite() {
                   </Card>
                 </motion.div>
               ))}
+              </div>
+              <button
+                aria-label="Next"
+                onClick={() => scrollHorizontally(testimonialsScrollRef, "right")}
+                className="flex items-center justify-center absolute -right-2 md:-right-4 top-1/2 -translate-y-1/2 w-8 h-8 md:w-10 md:h-10 rounded-full border border-white/30 bg-black/50 hover:bg-black/70 z-10"
+              >
+                <span className="sr-only">Next</span>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 md:w-5 md:h-5 text-white"><path fillRule="evenodd" d="M8.22 20.28a.75.75 0 010-1.06L14.44 13 8.22 6.78a.75.75 0 111.06-1.06l6.75 6.75a.75.75 0 010 1.06l-6.75 6.75a.75.75 0 01-1.06 0z" clipRule="evenodd" /></svg>
+              </button>
             </div>
           </motion.div>
         </div>
       </section>
 
       {/* Enhanced Contact Section */}
-      <section ref={sectionRefs.contact} id="contact" className="py-20 relative">
+      <section ref={sectionRefs.contact} id="contact" className="py-2 relative">
         <div className="absolute inset-0 bg-gradient-to-br from-cyan-900/10 via-purple-900/10 to-pink-900/10" />
 
-        <div className="container mx-auto px-6 relative z-10">
+        <div className="container mx-auto px-2 relative z-10 max-w-8xl">
           <motion.div
             initial={{ y: 100, opacity: 0 }}
             whileInView={{ y: 0, opacity: 1 }}
@@ -3357,7 +3423,7 @@ export default function AdvancedTechWebsite() {
             </p>
           </motion.div>
 
-          <div className="grid lg:grid-cols-2 gap-16">
+          <div className="grid lg:grid-cols-2 gap-8">
             {/* Contact Information */}
             <motion.div
               initial={{ x: -100, opacity: 0 }}
@@ -3372,7 +3438,7 @@ export default function AdvancedTechWebsite() {
                     {
                       icon: Mail,
                       title: "Email Us",
-                      content: "hebahesham102@gmail.com",
+                      content: "info@starsolution.ai",
                       description: "Send us your project details",
                     },
                     {
@@ -3596,10 +3662,10 @@ export default function AdvancedTechWebsite() {
       </section>
 
       {/* Enhanced Footer */}
-      <footer className="py-20 border-t border-white/10 relative">
+      <footer className="py-8 border-t border-white/10 relative">
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950 to-transparent" />
 
-        <div className="container mx-auto px-6 relative z-10">
+        <div className="container mx-auto px-2 relative z-10 max-w-8xl">
           <div className="grid lg:grid-cols-4 gap-12 mb-16">
             <div className="lg:col-span-2">
               <motion.div
@@ -3630,9 +3696,9 @@ export default function AdvancedTechWebsite() {
               </p>
               <div className="flex space-x-6">
                 {[
+                  { icon: Facebook, label: "Facebook" },
                   { icon: Linkedin, label: "LinkedIn" },
-                  { icon: Twitter, label: "Twitter" },
-                  { icon: Github, label: "GitHub" },
+                  { icon: Instagram, label: "Instagram" },
                 ].map((social, index) => (
                   <motion.button
                     key={index}
@@ -3654,75 +3720,129 @@ export default function AdvancedTechWebsite() {
             </div>
 
             <div>
-              <h4 className="text-xl font-bold mb-6 text-white">Services</h4>
-              <div className="space-y-4">
-                {[
-                  { name: "Software Development", action: "Custom software solutions", section: "services" },
-                  { name: "Digital Marketing", action: "Growth marketing strategies", section: "services" },
-                  { name: "AI & Machine Learning", action: "Intelligent automation", section: "services" },
-                  { name: "Cloud Solutions", action: "Scalable cloud infrastructure", section: "services" },
-                  { name: "DevOps", action: "Streamlined development processes", section: "services" },
-                ].map((service, index) => (
-                  <motion.button
-                    key={index}
-                    whileHover={{ x: 5, scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    className="block text-gray-300 hover:text-cyan-400 transition-colors duration-300 text-left cursor-pointer group"
-                    onClick={() => {
-                      if (service.section === "services") {
-                        scrollToSection("services");
-                      } else {
-                        toast({
-                          title: service.name,
-                          description: service.action,
-                          duration: 3000,
-                        });
-                      }
-                    }}
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => toggleSection('services')}
+                className="w-full bg-gradient-to-r from-cyan-500/20 to-purple-500/20 rounded-xl p-4 mb-4 flex items-center justify-between text-white font-bold text-lg hover:from-cyan-500/30 hover:to-purple-500/30 transition-all duration-300"
+              >
+                <span>SERVICES</span>
+                <motion.div
+                  animate={{ rotate: expandedSections.services ? 180 : 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <ArrowRight className="w-5 h-5" />
+                </motion.div>
+              </motion.button>
+              
+              <AnimatePresence>
+                {expandedSections.services && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="overflow-hidden"
                   >
-                    <span className="group-hover:text-cyan-400 transition-colors duration-300">
-                      {service.name}
-                    </span>
-                  </motion.button>
-                ))}
-              </div>
+                    <div className="space-y-3 pl-4">
+                      {[
+                        { name: "Software Development", action: "Custom software solutions", section: "services" },
+                        { name: "Digital Marketing", action: "Growth marketing strategies", section: "services" },
+                        { name: "AI & Machine Learning", action: "Intelligent automation", section: "services" },
+                        { name: "Cloud Solutions", action: "Scalable cloud infrastructure", section: "services" },
+                        { name: "DevOps", action: "Streamlined development processes", section: "services" },
+                      ].map((service, index) => (
+                        <motion.button
+                          key={index}
+                          whileHover={{ x: 5, scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          className="flex items-center text-gray-300 hover:text-cyan-400 transition-colors duration-300 text-left cursor-pointer group"
+                          onClick={() => {
+                            if (service.section === "services") {
+                              scrollToSection("services");
+                            } else {
+                              toast({
+                                title: service.name,
+                                description: service.action,
+                                duration: 3000,
+                              });
+                            }
+                          }}
+                        >
+                          <ArrowRight className="w-4 h-4 mr-3 text-cyan-400 group-hover:translate-x-1 transition-transform duration-300" />
+                          <span className="group-hover:text-cyan-400 transition-colors duration-300">
+                            {service.name}
+                          </span>
+                        </motion.button>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
 
             <div>
-              <h4 className="text-xl font-bold mb-6 text-white">Company</h4>
-              <div className="space-y-4">
-                {[
-                  { name: "About Us", action: "Learn about our mission and values", section: "about" },
-                  { name: "Our Team", action: "Meet our expert professionals", section: "team" },
-                  { name: "Careers", action: "Join our growing team", section: "careers" },
-                  { name: "Contact", action: "Get in touch with us", section: "contact" },
-                  { name: "Blog", action: "Read our latest insights", section: "blog" }
-                ].map((item, index) => (
-                  <motion.button
-                    key={index}
-                    whileHover={{ x: 5, scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    className="block text-gray-300 hover:text-cyan-400 transition-colors duration-300 text-left cursor-pointer group"
-                    onClick={() => {
-                      if (item.section === "contact") {
-                        scrollToSection("contact");
-                      } else if (item.section === "team") {
-                        scrollToSection("team");
-                      } else {
-                        toast({
-                          title: item.name,
-                          description: item.action,
-                          duration: 3000,
-                        });
-                      }
-                    }}
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => toggleSection('company')}
+                className="w-full bg-gradient-to-r from-cyan-500/20 to-purple-500/20 rounded-xl p-4 mb-4 flex items-center justify-between text-white font-bold text-lg hover:from-cyan-500/30 hover:to-purple-500/30 transition-all duration-300"
+              >
+                <span>COMPANY</span>
+                <motion.div
+                  animate={{ rotate: expandedSections.company ? 180 : 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <ArrowRight className="w-5 h-5" />
+                </motion.div>
+              </motion.button>
+              
+              <AnimatePresence>
+                {expandedSections.company && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="overflow-hidden"
                   >
-                    <span className="group-hover:text-cyan-400 transition-colors duration-300">
-                      {item.name}
-                    </span>
-                  </motion.button>
-                ))}
-              </div>
+                    <div className="space-y-3 pl-4">
+                      {[
+                        { name: "About Us", action: "Learn about our mission and values", section: "about" },
+                        { name: "Our Team", action: "Meet our expert professionals", section: "team" },
+                        { name: "Careers", action: "Join our growing team", section: "careers" },
+                        { name: "Contact", action: "Get in touch with us", section: "contact" },
+                        { name: "Blog", action: "Read our latest insights", section: "blog" }
+                      ].map((item, index) => (
+                        <motion.button
+                          key={index}
+                          whileHover={{ x: 5, scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          className="flex items-center text-gray-300 hover:text-cyan-400 transition-colors duration-300 text-left cursor-pointer group"
+                          onClick={() => {
+                            if (item.section === "contact") {
+                              scrollToSection("contact");
+                            } else if (item.section === "team") {
+                              scrollToSection("team");
+                            } else {
+                              toast({
+                                title: item.name,
+                                description: item.action,
+                                duration: 3000,
+                              });
+                            }
+                          }}
+                        >
+                          <ArrowRight className="w-4 h-4 mr-3 text-cyan-400 group-hover:translate-x-1 transition-transform duration-300" />
+                          <span className="group-hover:text-cyan-400 transition-colors duration-300">
+                            {item.name}
+                          </span>
+                        </motion.button>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </div>
 
@@ -3733,22 +3853,16 @@ export default function AdvancedTechWebsite() {
               </p>
               <div className="flex space-x-6">
                 {[
-                  { name: "Privacy Policy", action: "How we protect your data" },
-                  { name: "Terms of Service", action: "Our service agreement" },
-                  { name: "Cookie Policy", action: "Cookie usage information" }
+                  { name: "Privacy Policy", policy: "privacy" },
+                  { name: "Terms of Service", policy: "terms" },
+                  { name: "Cookie Policy", policy: "cookies" }
                 ].map((item, index) => (
                   <motion.button
                     key={index}
                     whileHover={{ y: -2, scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     className="text-gray-400 hover:text-cyan-400 transition-colors duration-300 text-sm cursor-pointer group"
-                    onClick={() =>
-                      toast({
-                        title: item.name,
-                        description: item.action,
-                        duration: 3000,
-                      })
-                    }
+                    onClick={() => openPolicy(item.policy)}
                   >
                     <span className="group-hover:text-cyan-400 transition-colors duration-300">
                       {item.name}
@@ -3760,6 +3874,346 @@ export default function AdvancedTechWebsite() {
           </div>
         </div>
       </footer>
+
+      {/* Policy Modals */}
+      {activePolicy && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4 overflow-y-auto"
+          onClick={closePolicy}
+        >
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0, y: 50 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            exit={{ scale: 0.9, opacity: 0, y: 50 }}
+            className="relative w-full max-w-4xl bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl overflow-hidden my-8 border border-white/10"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex justify-between items-center p-6 border-b border-white/10">
+              <h2 className="text-2xl font-bold text-white">
+                {activePolicy === 'privacy' && 'Privacy Policy'}
+                {activePolicy === 'terms' && 'Terms of Service'}
+                {activePolicy === 'cookies' && 'Cookie Policy'}
+              </h2>
+              <button
+                onClick={closePolicy}
+                className="text-gray-400 hover:text-white transition-colors duration-300"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6 max-h-96 overflow-y-auto">
+              {activePolicy === 'privacy' && (
+                <div className="space-y-4 text-gray-300">
+                  <p className="text-lg font-semibold text-white mb-4">Information We Collect</p>
+                  <p>
+                    At Star Solutions, we collect information you provide directly to us, such as when you create an account, 
+                    request our services, or contact us for support. This includes your name, email address, company information, 
+                    project requirements, and any other information you choose to provide.
+                  </p>
+                  <p>
+                    We also automatically collect certain information about your use of our website, including your IP address, 
+                    browser type, operating system, access times, and the pages you have viewed directly before and after accessing our website.
+                  </p>
+                  
+                  <p className="text-lg font-semibold text-white mb-4 mt-6">How We Use Your Information</p>
+                  <p>
+                    We use the information we collect to provide, maintain, and improve our services, including website development, 
+                    digital marketing, content creation, and other digital solutions. We may use your information to communicate with you 
+                    about our services, send you technical notices and support messages, and respond to your comments and questions.
+                  </p>
+                  
+                  <p className="text-lg font-semibold text-white mb-4 mt-6">Information Sharing</p>
+                  <p>
+                    We do not sell, trade, or otherwise transfer your personal information to third parties without your consent, 
+                    except as described in this policy. We may share your information with trusted third parties who assist us in 
+                    operating our website, conducting our business, or servicing you, as long as those parties agree to keep this 
+                    information confidential.
+                  </p>
+                  
+                  <p className="text-lg font-semibold text-white mb-4 mt-6">Data Security</p>
+                  <p>
+                    We implement appropriate security measures to protect your personal information against unauthorized access, 
+                    alteration, disclosure, or destruction. However, no method of transmission over the internet or electronic 
+                    storage is 100% secure, and we cannot guarantee absolute security.
+                  </p>
+                  
+                  <p className="text-lg font-semibold text-white mb-4 mt-6">Can the Privacy Policy Change?</p>
+                  <p>
+                    We may occasionally make changes to this privacy policy, for example to comply with new requirements imposed by applicable laws or technical requirements. We will post the updated privacy policy on our website. We therefore encourage you to review this page every so often.
+                  </p>
+                  <p>
+                    We may also notify you in case of material changes and, where required by applicable law, we will seek your consent to those changes.
+                  </p>
+                  <p>
+                    If we wish to process your personal information for a new purpose not described in this privacy policy, where necessary we will inform you and where required we will seek your consent.
+                  </p>
+                  <p className="mt-4">
+                    <strong>Want to know more? You may be interested in the following sections of our Privacy Policy:</strong>
+                  </p>
+                  <ul className="list-disc list-inside mt-2 space-y-1">
+                    <li>What is covered by this privacy policy?</li>
+                    <li>Who collects & uses your personal information?</li>
+                    <li>What are your rights regarding your personal information?</li>
+                  </ul>
+                </div>
+              )}
+
+              {activePolicy === 'terms' && (
+                <div className="space-y-4 text-gray-300">
+                  <p className="text-lg font-semibold text-white mb-4">Service Description</p>
+                  <p>
+                    Star Solutions provides comprehensive digital services including but not limited to website development 
+                    (frontend and backend), digital marketing strategies, content creation, brand development, and other 
+                    technology-related services. Our services are tailored to meet the specific needs of businesses seeking 
+                    to establish or enhance their digital presence.
+                  </p>
+                  
+                  <p className="text-lg font-semibold text-white mb-4 mt-6">Service Agreement</p>
+                  <p>
+                    By engaging our services, you agree to provide accurate and complete information necessary for project 
+                    execution. You are responsible for ensuring that all content, materials, and information provided to us 
+                    do not infringe upon any third-party rights and comply with applicable laws and regulations.
+                  </p>
+                  
+                  <p className="text-lg font-semibold text-white mb-4 mt-6">Payment Terms</p>
+                  <p>
+                    Payment terms will be specified in individual project agreements. Generally, we require a deposit 
+                    before commencing work, with remaining payments due upon project milestones or completion. All prices 
+                    are subject to change with 30 days' notice for ongoing services.
+                  </p>
+                  
+                  <p className="text-lg font-semibold text-white mb-4 mt-6">Intellectual Property</p>
+                  <p>
+                    Upon full payment, you will own all rights to the custom work we create for you. We retain the right 
+                    to use general knowledge, skills, and techniques developed during the course of providing services. 
+                    Any pre-existing intellectual property remains with its respective owners.
+                  </p>
+                  
+                  <p className="text-lg font-semibold text-white mb-4 mt-6">Limitation of Liability</p>
+                  <p>
+                    Our liability for any claims arising from our services is limited to the amount paid for the specific 
+                    service in question. We are not liable for any indirect, incidental, special, or consequential damages 
+                    arising from the use of our services.
+                  </p>
+                  
+                  <p className="text-lg font-semibold text-white mb-4 mt-6">Termination</p>
+                  <p>
+                    Either party may terminate services with 30 days' written notice. Upon termination, you will be 
+                    responsible for payment of all work completed up to the termination date. We will provide you with 
+                    all work product and materials created for your project.
+                  </p>
+                </div>
+              )}
+
+              {activePolicy === 'cookies' && (
+                <div className="space-y-4 text-gray-300">
+                  <p className="text-lg font-semibold text-white mb-4">What Are Cookies</p>
+                  <p>
+                    Cookies are small text files that are placed on your computer or mobile device when you visit our website. 
+                    They help us provide you with a better experience by remembering your preferences and enabling certain 
+                    functionality. We use both session cookies (which expire when you close your browser) and persistent 
+                    cookies (which remain on your device for a set period).
+                  </p>
+                  
+                  <p className="text-lg font-semibold text-white mb-4 mt-6">Types of Cookies We Use</p>
+                  <p>
+                    <strong>Essential Cookies:</strong> These cookies are necessary for the website to function properly. 
+                    They enable basic functions like page navigation, access to secure areas, and form submissions. 
+                    The website cannot function properly without these cookies.
+                  </p>
+                  <p>
+                    <strong>Analytics Cookies:</strong> We use these cookies to understand how visitors interact with our 
+                    website by collecting and reporting information anonymously. This helps us improve our website's 
+                    performance and user experience.
+                  </p>
+                  <p>
+                    <strong>Marketing Cookies:</strong> These cookies are used to track visitors across websites to display 
+                    relevant and engaging advertisements. They help us measure the effectiveness of our marketing campaigns.
+                  </p>
+                  
+                  <p className="text-lg font-semibold text-white mb-4 mt-6">Managing Cookies</p>
+                  <p>
+                    You can control and manage cookies through your browser settings. Most browsers allow you to refuse 
+                    cookies or delete them. However, disabling certain cookies may affect the functionality of our website 
+                    and your ability to access certain features.
+                  </p>
+                  
+                  <p className="text-lg font-semibold text-white mb-4 mt-6">Third-Party Cookies</p>
+                  <p>
+                    We may use third-party services that set their own cookies, such as Google Analytics, social media 
+                    platforms, and advertising networks. These third parties have their own privacy policies and cookie 
+                    practices, which we encourage you to review.
+                  </p>
+                  
+                  <p className="text-lg font-semibold text-white mb-4 mt-6">Updates to This Policy</p>
+                  <p>
+                    We may update this Cookie Policy from time to time to reflect changes in our practices or for other 
+                    operational, legal, or regulatory reasons. We will notify you of any material changes by posting the 
+                    updated policy on our website.
+                  </p>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+
+      {/* Feedback Modal */}
+      {isFeedbackModalOpen && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          onClick={closeFeedbackModal}
+        >
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.9, opacity: 0 }}
+            className="bg-gradient-to-br from-slate-900 to-purple-900 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex justify-between items-center p-6 border-b border-white/10">
+              <h2 className="text-2xl font-bold text-white">Share Your Feedback</h2>
+              <button
+                onClick={closeFeedbackModal}
+                className="p-2 hover:bg-white/10 rounded-full transition-colors"
+              >
+                <X className="w-6 h-6 text-white" />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6 max-h-[70vh] overflow-y-auto">
+              <form onSubmit={handleFeedbackSubmit} className="space-y-6">
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div>
+                    <label htmlFor="feedbackName" className="block text-sm font-medium text-gray-300 mb-2">
+                      Full Name *
+                    </label>
+                    <motion.input
+                      whileFocus={{ scale: 1.02 }}
+                      type="text"
+                      id="feedbackName"
+                      value={feedbackData.name}
+                      onChange={(e) => setFeedbackData({ ...feedbackData, name: e.target.value })}
+                      className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-all"
+                      placeholder="Enter your full name"
+                    />
+                    {feedbackErrors.name && (
+                      <p className="text-red-400 text-sm mt-1">{feedbackErrors.name}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label htmlFor="feedbackEmail" className="block text-sm font-medium text-gray-300 mb-2">
+                      Email Address *
+                    </label>
+                    <motion.input
+                      whileFocus={{ scale: 1.02 }}
+                      type="email"
+                      id="feedbackEmail"
+                      value={feedbackData.email}
+                      onChange={(e) => setFeedbackData({ ...feedbackData, email: e.target.value })}
+                      className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-all"
+                      placeholder="Enter your email address"
+                    />
+                    {feedbackErrors.email && (
+                      <p className="text-red-400 text-sm mt-1">{feedbackErrors.email}</p>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-3">
+                    Rating *
+                  </label>
+                  <div className="flex gap-2">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <motion.button
+                        key={star}
+                        type="button"
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                        onClick={() => setFeedbackData({ ...feedbackData, rating: star })}
+                        className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+                      >
+                        <Star
+                          className={`w-8 h-8 ${
+                            star <= feedbackData.rating
+                              ? "text-yellow-400 fill-current"
+                              : "text-gray-400"
+                          }`}
+                        />
+                      </motion.button>
+                    ))}
+                  </div>
+                  {feedbackErrors.rating && (
+                    <p className="text-red-400 text-sm mt-1">{feedbackErrors.rating}</p>
+                  )}
+                  <p className="text-gray-400 text-sm mt-2">
+                    {feedbackData.rating > 0 ? `${feedbackData.rating} out of 5 stars` : "Please select a rating"}
+                  </p>
+                </div>
+
+                <div>
+                  <label htmlFor="feedbackText" className="block text-sm font-medium text-gray-300 mb-2">
+                    Your Feedback *
+                  </label>
+                  <motion.textarea
+                    whileFocus={{ scale: 1.02 }}
+                    id="feedbackText"
+                    value={feedbackData.feedback}
+                    onChange={(e) => setFeedbackData({ ...feedbackData, feedback: e.target.value })}
+                    rows={4}
+                    className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-all resize-none"
+                    placeholder="Please share your feedback about our services..."
+                  />
+                  {feedbackErrors.feedback && (
+                    <p className="text-red-400 text-sm mt-1">{feedbackErrors.feedback}</p>
+                  )}
+                </div>
+
+                <div className="flex gap-4 pt-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={closeFeedbackModal}
+                    className="flex-1 border-white/20 text-white hover:bg-white/10 bg-transparent"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="flex-1 bg-gradient-to-r from-cyan-600 to-purple-600 hover:from-cyan-700 hover:to-purple-700 text-white"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
+                        Sending...
+                      </>
+                    ) : (
+                      <>
+                        <MessageSquare className="w-4 h-4 mr-2" />
+                        Submit Feedback
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </form>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
     </div>
   )
 }
